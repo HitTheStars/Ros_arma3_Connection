@@ -22,6 +22,21 @@
 
 ## 重要更新
 
+### ⚠️ 最新：深度图像桥接（EGO-Planner 兼容版）
+
+经过深入分析 **EGO-Planner-v2** 的源代码，我们发现它实际上订阅的是 **深度图像**（`sensor_msgs/Image`），而不是点云。因此，我们提供了 **修正版的桥接程序**，直接符合 EGO-Planner 的输入要求：
+
+- **`arma3_ros_bridge_depth.py`**（Windows 端）：立体视觉 → 视差图 → 深度图
+- **`arma3_depth_bridge.py`**（Linux 端）：接收深度图像并发布为 ROS `sensor_msgs/Image`
+
+**优势**：
+- ✅ 完全符合 EGO-Planner-v2 的输入要求
+- ✅ 数据量小（~0.5 MB vs ~10 MB 点云）
+- ✅ 传输速度快，延迟低
+- ✅ 无需点云转换
+
+**详细信息**：[DEPTH_BRIDGE_GUIDE.md](windows_side/bridge_program/DEPTH_BRIDGE_GUIDE.md)
+
 ### ✅ 完整的 ArmaCOM 集成
 
 我们现在提供了**完整的、可运行的** Arma 3 MOD，包括：
