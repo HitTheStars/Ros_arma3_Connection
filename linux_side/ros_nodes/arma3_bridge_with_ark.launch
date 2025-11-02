@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Parameters -->
+    <arg name="num_uavs" default="3"/>
+    <arg name="listen_port" default="5555"/>
+    <arg name="use_ark" default="true"/>
+    
+    <!-- Arma3 ROS Bridge Node -->
+    <node pkg="arma3_ros_bridge" type="arma3_ros_bridge.py" name="arma3_ros_bridge" output="screen">
+        <param name="listen_port" value="$(arg listen_port)"/>
+        <param name="num_uavs" value="$(arg num_uavs)"/>
+    </node>
+    
+    <!-- Stereo Vision Processor -->
+    <node pkg="arma3_ros_bridge" type="stereo_vision.py" name="stereo_vision_processor" output="screen"/>
+    
+    <!-- EGO-Planner Interface -->
+    <node pkg="arma3_ros_bridge" type="ego_planner_interface.py" name="ego_planner_interface" output="screen">
+        <param name="num_uavs" value="$(arg num_uavs)"/>
+    </node>
+    
+    <!-- ARK Integration Node (optional) -->
+    <node if="$(arg use_ark)" pkg="arma3_ros_bridge" type="ark_integration.py" name="ark_integration" output="screen">
+        <param name="num_uavs" value="$(arg num_uavs)"/>
+        <param name="use_ark" value="$(arg use_ark)"/>
+    </node>
+    
+    <!-- RViz for visualization -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find arma3_ros_bridge)/rviz/arma3_bridge.rviz" required="false"/>
+    
+</launch>
