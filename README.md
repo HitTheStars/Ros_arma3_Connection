@@ -20,15 +20,13 @@
 
 ## ⚠️ 重要更新
 
-### 🎯 推荐使用简化架构（2025-01-XX）
+### 🎯 两种架构方案（2025-11-03）
 
-经过深入分析 **ego-planner-swarm** 的源代码，我们发现：
+本项目提供两种架构方案，您可以根据需求选择：
 
-> **深度图像是可选的！** EGO-Planner 的 local mapping 模块可以自动选择使用深度图像或点云作为输入。在默认的 CPU 模式下（`ENABLE_CUDA = false`），它使用**点云**或**里程计**数据。
+#### 方案 1: 简化架构（推荐用于快速验证）
 
-因此，我们提供了一个**更简单、更稳定**的方案：
-
-**只使用 ArmaCOM 进行状态和控制通信，不需要复杂的图像处理。**
+**只使用 ArmaCOM 进行状态和控制通信，不需要图像处理。**
 
 **优势**：
 - ✅ 延迟降低 **90%+**（5-20 ms vs 120-300 ms）
@@ -36,7 +34,29 @@
 - ✅ 实现复杂度降低 **75%**（500 行 vs 2000 行）
 - ✅ 稳定性更高，不依赖图像采集
 
-**详细说明**：请查看 [简化架构文档](docs/SIMPLIFIED_ARCHITECTURE.md)
+**适用场景**：
+- 使用预加载的静态地图（PCD 点云）
+- 环境已知的路径规划验证
+- 快速原型开发和测试
+
+**详细说明**：[简化架构文档](docs/SIMPLIFIED_ARCHITECTURE.md)
+
+#### 方案 2: 深度估计架构（推荐用于动态环境）
+
+**使用 Depth Anything V2 从 RGB 图像生成深度图，支持动态环境感知。**
+
+**优势**：
+- ✅ GPU 加速深度估计（RTX 4060 + DirectML，12ms 推理）
+- ✅ 端到端延迟 < 50ms，支持 10 FPS 实时运行
+- ✅ 单目深度估计，不需要双目相机或 LiDAR
+- ✅ 支持动态障碍物检测和实时建图
+
+**适用场景**：
+- 动态环境的实时障碍物检测
+- 未知环境的探索和建图
+- 需要视觉感知的完整闭环系统
+
+**详细说明**：[深度估计模块文档](DEPTH_ESTIMATION_README.md)
 
 ---
 
@@ -151,10 +171,30 @@
   - 简化架构文档（`SIMPLIFIED_ARCHITECTURE.md`）
   - 故障排除指南
 
-### 🚧 可选功能
+### ✅ 深度估计模块（可选增强）
 
-- ⏳ **图像采集**：基于 codingWithArma3 的多视角图像截取（可选）
-- ⏳ **深度图像处理**：立体视觉和深度图生成（可选）
+- ✅ **Windows 端深度估计**
+  - Depth Anything V2 ONNX 模型
+  - DirectML GPU 加速（RTX 4060）
+  - 推理时间 ~12ms
+  - 多输入源支持（摄像头、视频、Arma 3）
+  - PNG 压缩和 TCP 传输
+
+- ✅ **Linux 端深度接收**
+  - TCP 服务器（端口 5555）
+  - ROS 深度图像发布节点
+  - 完全兼容 EGO-Planner 输入
+  - 实时性能监控
+
+- ✅ **完整部署文档**
+  - Windows 端详细安装指南
+  - 模型下载和配置说明
+  - 性能优化和故障排除
+
+**详细说明**：[深度估计模块文档](DEPTH_ESTIMATION_README.md)
+
+### 🚧 其他可选功能
+
 - ⏳ **ARK 框架集成**：机器学习增强控制（可选）
 - ⏳ **GUI 界面**：用于选择地图中的目标点
 - ⏳ **Docker 容器化**：将 ROS 和 EGO-Planner 部署在 Docker 中
@@ -165,10 +205,16 @@
 
 ### Windows 端
 
+**基础要求**：
 - **操作系统**：Windows 10/11 (64-bit)
 - **Arma 3**：完整版游戏（Steam）
 - **ArmaCOM**：v2.0 Beta 2（已包含在项目中）
 - **BattlEye**：必须禁用（ArmaCOM 不支持 BattlEye）
+
+**深度估计模块额外要求**（可选）：
+- **Python**：3.8 - 3.11
+- **GPU**：NVIDIA RTX 4060 或支持 DirectML 的 GPU
+- **依赖**：OpenCV, NumPy, ONNX Runtime DirectML
 
 ### Linux 端
 
@@ -251,8 +297,14 @@ cd linux_side
 
 ## 详细文档
 
-- **[简化架构文档](docs/SIMPLIFIED_ARCHITECTURE.md)** - 推荐阅读！
+### 核心文档
+- **[快速启动指南](QUICK_START_GUIDE.md)** - 一站式启动指导（推荐）
+- **[简化架构文档](docs/SIMPLIFIED_ARCHITECTURE.md)** - 方案 1：仅状态通信
+- **[深度估计模块文档](DEPTH_ESTIMATION_README.md)** - 方案 2：深度感知
 - **[MOD 安装指南](windows_side/arma3_mod/MOD_INSTALLATION_GUIDE.md)** - Windows 端详细安装
+
+### 可选功能文档
+- **[深度估计部署指南](windows_side/DEPLOYMENT_GUIDE.md)** - Windows 端深度估计详细配置
 - **[ARK 集成文档](docs/ARK_INTEGRATION.md)** - 可选的 ML 增强
 - **[深度图像桥接](windows_side/bridge_program/DEPTH_BRIDGE_GUIDE.md)** - 可选的图像处理
 - **[完整桥接指南](windows_side/bridge_program/COMPLETE_BRIDGE_GUIDE.md)** - 可选的图像采集
@@ -263,6 +315,9 @@ cd linux_side
 
 ```
 Ros_arma3_Connection/
+├── README.md                        # 项目总览（本文件）
+├── QUICK_START_GUIDE.md             # 快速启动指南
+├── DEPTH_ESTIMATION_README.md       # 深度估计模块文档
 ├── windows_side/                    # Windows 端代码
 │   ├── arma3_mod/                   # Arma 3 MOD
 │   │   ├── @ROS_Bridge/             # MOD 文件夹
@@ -276,17 +331,27 @@ Ros_arma3_Connection/
 │   │   ├── ArmaCOM_x64.dll          # ArmaCOM 扩展
 │   │   ├── quick_install.bat        # 快速安装
 │   │   └── MOD_INSTALLATION_GUIDE.md
-│   └── bridge_program/              # Python 桥接程序（可选）
+│   ├── arma3_depth_sender.py        # 深度估计发送器（可选）
+│   ├── requirements.txt             # Python 依赖（深度估计）
+│   ├── test_installation.py         # 安装测试（深度估计）
+│   ├── start_depth_sender.bat       # 启动脚本（深度估计）
+│   ├── DEPLOYMENT_GUIDE.md          # 深度估计部署指南
+│   ├── models/                      # ONNX 模型目录
+│   │   └── MODEL_DOWNLOAD_GUIDE.md  # 模型下载指南
+│   └── bridge_program/              # Python 桥接程序（旧版）
 ├── linux_side/                      # Linux 端代码
 │   ├── ros_nodes/                   # ROS 节点
-│   │   ├── arma3_ros_bridge.py      # TCP 服务器
+│   │   ├── arma3_ros_bridge.py      # TCP 服务器（状态通信）
+│   │   ├── arma3_depth_receiver.py  # 深度接收器（可选）
+│   │   ├── arma3_depth_receiver.launch  # Launch 文件（深度）
 │   │   ├── ego_planner_interface.py # EGO-Planner 接口
 │   │   └── arma3_bridge.launch
 │   ├── ego_planner/                 # EGO-Planner-v2
 │   ├── deploy.sh                    # 一键部署
-│   └── start.sh                     # 快速启动
+│   ├── start.sh                     # 快速启动（状态通信）
+│   └── start_depth_receiver.sh      # 启动脚本（深度接收）
 └── docs/                            # 文档
-    ├── SIMPLIFIED_ARCHITECTURE.md   # 简化架构（推荐）
+    ├── SIMPLIFIED_ARCHITECTURE.md   # 简化架构（方案 1）
     └── ARK_INTEGRATION.md           # ARK 集成（可选）
 ```
 
@@ -299,6 +364,7 @@ Ros_arma3_Connection/
 - **[EGO-Planner-v2](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)** - ZJU-FAST-Lab 的多无人机路径规划算法
 - **[ego-planner-swarm](https://github.com/ZJU-FAST-Lab/ego-planner-swarm)** - EGO-Planner 的群体版本
 - **[ArmaCOM](https://github.com/googleben/ArmaCOM)** - Arma 3 的通信扩展
+- **[Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2)** - 单目深度估计模型
 - **[codingWithArma3](https://github.com/Daboolu/codingWithArma3)** - Arma 3 图像采集项目
 - **[ARK Robotics](https://github.com/Robotics-Ark/ark_framework)** - 机器学习框架（可选）
 
