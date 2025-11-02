@@ -1,0 +1,17 @@
+# Arma 3 Depth Sender - Windows 端依赖包
+# Python 3.8 - 3.11
+
+# 计算机视觉
+opencv-python==4.8.1.78
+
+# 数值计算
+numpy==1.24.3
+
+# ONNX Runtime with DirectML (GPU 加速)
+# 注意: 不要同时安装 onnxruntime 和 onnxruntime-directml
+onnxruntime-directml==1.17.1
+
+# 可选: 如果需要从 PyTorch 转换模型
+# torch==2.0.1
+# torchvision==0.15.2
+# onnx==1.14.0
