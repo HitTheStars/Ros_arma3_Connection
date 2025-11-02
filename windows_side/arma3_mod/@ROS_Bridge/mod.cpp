@@ -1,0 +1,14 @@
+name = "ROS Bridge for Arma 3";
+picture = "";
+actionName = "Website";
+action = "https://github.com/HitTheStars/Ros_arma3_Connection";
+description = "ROS Bridge - Enables communication between Arma 3 and ROS (Robot Operating System) via TCP/IP using ArmaCOM extension. Supports multi-UAV path planning with EGO-Planner-v2.";
+logo = "";
+logoOver = "";
+tooltip = "ROS Bridge";
+tooltipOwned = "ROS Bridge Owned";
+overview = "This MOD provides a bridge between Arma 3 and ROS, enabling advanced robotics algorithms like EGO-Planner to control UAVs in Arma 3's high-fidelity simulation environment.";
+author = "HitTheStars";
+overviewPicture = "";
+overviewText = "ROS Bridge MOD";
+overviewFootnote = "";

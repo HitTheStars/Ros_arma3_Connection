@@ -2,10 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-一个**完整的、可运行的** Arma 3 与 ROS 集成系统，用于群体无人机路径规划。本项目将 Arma 3 游戏引擎作为高保真仿真环境，与 ROS 中的 **EGO-Planner-v2** 路径规划算法集成，并可选集成 **ARK Robotics 框架**以增强机器学习能力，实现多无人机的自主协调飞行。
+一个**完整的、可运行的** Arma 3 与 ROS 集成系统，用于群体无人机路径规划。本项目将 Arma 3 游戏引擎作为高保真仿真环境，与 ROS 中的 **EGO-Planner-v2** 路径规划算法集成，并通过 **ArmaCOM 扩展**实现真正的 TCP/IP 通信，可选集成 **ARK Robotics 框架**以增强机器学习能力，实现多无人机的自主协调飞行。
 
 ## 📋 目录
 
+- [重要更新](#重要更新)
 - [系统概述](#系统概述)
 - [系统架构](#系统架构)
 - [功能特性](#功能特性)
@@ -13,11 +14,38 @@
 - [快速开始](#快速开始)
 - [详细安装指南](#详细安装指南)
 - [使用说明](#使用说明)
-- [配置说明](#配置说明)
 - [项目结构](#项目结构)
 - [故障排除](#故障排除)
-- [开发指南](#开发指南)
 - [致谢](#致谢)
+
+---
+
+## 重要更新
+
+### ✅ 完整的 ArmaCOM 集成
+
+我们现在提供了**完整的、可运行的** Arma 3 MOD，包括：
+
+- **ArmaCOM 扩展**：v2.0 Beta 2，支持 TCP/IP 通信
+- **完整的 MOD 结构**：config.cpp、SQF 脚本、自动化安装
+- **PBO 打包工具**：用于发布版本
+- **快速安装模式**：用于开发和测试
+- **详细的安装指南**：[MOD 安装指南](windows_side/arma3_mod/MOD_INSTALLATION_GUIDE.md)
+
+### 🚀 快速开始
+
+**Windows 端（Arma 3）**：
+```cmd
+cd windows_side/arma3_mod
+quick_install.bat  # 以管理员身份运行
+```
+
+**Linux 端（ROS）**：
+```bash
+cd linux_side
+./deploy.sh
+./start.sh
+```
 
 ---
 
@@ -26,6 +54,7 @@
 本项目实现了 **Arma 3 游戏引擎**与 **ROS (Robot Operating System)** 之间的双向通信，用于群体无人机的路径规划和控制。系统的核心特点包括：
 
 - **高保真仿真环境**：利用 Arma 3 的军事模拟引擎提供接近真实的飞行环境
+- **真正的 TCP/IP 通信**：使用 ArmaCOM 扩展在 Arma 3 中实现 TCP 客户端
 - **多视角图像采集**：同时采集 6 个视角的无人机图像，用于立体视觉处理
 - **跨平台通信**：Windows (Arma 3) 与 Linux (ROS) 之间通过 TCP/IP 进行实时通信
 - **完整的感知-规划-控制闭环**：从图像采集、点云生成、路径规划到控制执行的完整流程
@@ -50,19 +79,22 @@
 │  │              Arma 3 游戏引擎                          │  │
 │  │  - 6 架无人机模型                                    │  │
 │  │  - 6 个摄像头视角（Render-to-Texture）               │  │
-│  │  - SQF 脚本控制                                      │  │
+│  │  - ROS Bridge MOD (SQF + ArmaCOM)                    │  │
+│  │    * TCP 客户端                                      │  │
+│  │    * 状态数据发送                                    │  │
+│  │    * 控制指令接收                                    │  │
 │  └──────────────────┬───────────────────────────────────┘  │
 │                     │                                        │
 │  ┌──────────────────▼───────────────────────────────────┐  │
-│  │          Python 桥接程序                              │  │
+│  │          Python 桥接程序（可选）                      │  │
 │  │  - 图像捕获（PIL.ImageGrab）                         │  │
 │  │  - JPEG 压缩                                         │  │
-│  │  - TCP/IP 客户端                                     │  │
+│  │  - 辅助图像传输                                      │  │
 │  └──────────────────┬───────────────────────────────────┘  │
 └────────────────────┼────────────────────────────────────────┘
                      │ TCP/IP (Port 5555)
-                     │ 图像数据 + 状态数据
-                     │ 控制指令
+                     │ 状态数据 + 控制指令
+                     │ (图像数据可选)
 ┌────────────────────▼────────────────────────────────────────┐
 │                  Linux 虚拟机 / 主机                         │
 │  ┌──────────────────────────────────────────────────────┐  │
@@ -70,12 +102,12 @@
 │  │  ┌────────────────────────────────────────────────┐  │  │
 │  │  │  arma3_ros_bridge 节点                         │  │  │
 │  │  │  - TCP/IP 服务器                               │  │  │
-│  │  │  - 图像接收和发布                              │  │  │
-│  │  │  - 状态数据处理                                │  │  │
+│  │  │  - 状态数据接收和发布                          │  │  │
+│  │  │  - 控制指令转发                                │  │  │
 │  │  └────────────┬───────────────────────────────────┘  │  │
 │  │               │                                        │  │
 │  │  ┌────────────▼───────────────────────────────────┐  │  │
-│  │  │  stereo_vision 节点                            │  │  │
+│  │  │  stereo_vision 节点（可选）                    │  │  │
 │  │  │  - 多视角图像配准                              │  │  │
 │  │  │  - 视差计算                                    │  │  │
 │  │  │  - 点云生成                                    │  │  │
@@ -111,25 +143,35 @@
 
 ### ✅ 已实现功能
 
-#### Windows 端
-- ✅ **完整的 Arma 3 MOD**
-  - 6 架无人机的场景设置
-  - 6 个摄像头视角的实时渲染
-  - SQF 脚本控制无人机行为
-  - 基于 codingWithArma3 项目的图像截取功能
+#### Windows 端（Arma 3 + ArmaCOM）
 
-- ✅ **增强的桥接程序**
+- ✅ **完整的 Arma 3 MOD**
+  - 基于 ArmaCOM v2.0 Beta 2 的 TCP 客户端
+  - SQF 脚本实现的状态发送和控制接收
+  - 自动检测场景中的所有无人机
+  - 实时发送位置、速度、方向等状态数据
+  - 接收并执行 MOVE 和 GOAL 指令
+  - 完整的 MOD 结构（config.cpp、XEH 脚本等）
+
+- ✅ **MOD 安装工具**
+  - 快速安装脚本（`quick_install.bat`）- 开发模式
+  - 完整安装脚本（`install_mod.bat`）- 发布模式
+  - PBO 打包脚本（`build_mod.bat`）
+  - 详细的安装指南（`MOD_INSTALLATION_GUIDE.md`）
+
+- ✅ **图像采集（可选）**
+  - 基于 codingWithArma3 项目的图像截取
   - 多线程图像采集（6 个视角）
-  - JPEG 压缩（质量 85%）
-  - TCP/IP 客户端
-  - 双向通信（发送图像和状态，接收控制指令）
+  - JPEG 压缩
+  - Python 桥接程序
 
 #### Linux 端
+
 - ✅ **ROS 桥接节点**
   - TCP/IP 服务器
-  - 图像接收和发布到 ROS 话题
-  - 状态数据处理
+  - 状态数据接收和发布到 ROS 话题
   - 控制指令转发
+  - 图像数据接收（可选）
 
 - ✅ **图像处理节点**
   - 多视角图像配准
@@ -150,15 +192,16 @@
   - 自动化安装脚本
 
 #### 部署和文档
+
 - ✅ **一键部署脚本**
   - Linux 端自动化部署（`deploy.sh`）
   - Windows 端自动化部署（`deploy.bat`）
   - 快速启动脚本（`start.sh` 和 `start.bat`）
 
 - ✅ **完整的文档**
-  - 详细的 README
-  - Arma 3 MOD 使用指南
-  - ARK 集成文档
+  - 详细的主 README
+  - Arma 3 MOD 安装指南（`MOD_INSTALLATION_GUIDE.md`）
+  - ARK 集成文档（`ARK_INTEGRATION.md`）
   - 故障排除指南
 
 ### 🚧 待完善功能
@@ -177,11 +220,9 @@
 
 - **操作系统**：Windows 10/11 (64-bit)
 - **Arma 3**：完整版游戏（Steam）
-- **Python**：3.8 或更高版本
-- **Python 包**：
-  - Pillow
-  - numpy
-  - opencv-python
+- **ArmaCOM**：v2.0 Beta 2（已包含在项目中）
+- **Python**：3.8 或更高版本（可选，用于图像采集）
+- **BattlEye**：必须禁用（ArmaCOM 不支持 BattlEye）
 
 ### Linux 端
 
@@ -219,20 +260,32 @@ chmod +x deploy.sh
 # 部署完成后，记下显示的 Linux IP 地址
 ```
 
-### 第二步：Windows 端部署
+### 第二步：Windows 端 MOD 安装
 
-```batch
-REM 克隆仓库（如果还没有）
-git clone https://github.com/HitTheStars/Ros_arma3_Connection.git
-cd Ros_arma3_Connection\windows_side
+**方式 1：快速安装（推荐，用于开发和测试）**
 
-REM 运行一键部署脚本
-deploy.bat
+1. 打开 `windows_side/arma3_mod/` 目录
+2. **右键点击** `quick_install.bat`
+3. 选择 **"以管理员身份运行"**
+4. 按照提示操作
 
-REM 按照提示输入 Linux IP 地址
+**方式 2：完整安装（用于发布）**
+
+1. 运行 `build_mod.bat` 打包 PBO 文件（需要 Arma 3 Tools）
+2. 运行 `install_mod.bat` 安装 MOD
+
+详细说明请参考：[MOD 安装指南](windows_side/arma3_mod/MOD_INSTALLATION_GUIDE.md)
+
+### 第三步：配置 MOD
+
+编辑 `@ROS_Bridge/addons/ros_bridge/XEH_postInit.sqf`：
+
+```sqf
+ROS_ServerIP = "192.168.1.100";  // 改成你的 Linux VM IP
+ROS_ServerPort = "5555";
 ```
 
-### 第三步：启动系统
+### 第四步：启动系统
 
 #### 1. 启动 Linux 端
 
@@ -243,13 +296,23 @@ cd linux_side
 
 #### 2. 启动 Arma 3
 
-- 打开 Arma 3
-- 点击 "Editor"
-- 选择 "Altis" 地图
-- 加载 "Camera" 任务
-- 点击 "Preview" 开始
+**使用启动器**：
+1. 打开 Arma 3 启动器
+2. MODs → 勾选 **@ROS_Bridge**
+3. Parameters → Additional Parameters → 添加 `-noBE`
+4. Play
 
-#### 3. 启动 Windows 桥接程序
+**使用命令行**：
+```cmd
+"C:\...\Arma 3\arma3_x64.exe" -mod=@ROS_Bridge -noBE
+```
+
+#### 3. 加载任务
+
+- Editor → Altis → Load → Camera
+- Preview (Ctrl+P)
+
+#### 4. （可选）启动 Python 图像采集
 
 ```batch
 cd windows_side
@@ -262,106 +325,29 @@ start.bat
 
 ### Linux 端详细安装
 
-#### 1. 安装 ROS Noetic
+请参考主 README 中的 "详细安装指南" 部分，或运行：
 
 ```bash
-# 设置 sources.list
-sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-
-# 设置密钥
-sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-
-# 安装
-sudo apt-get update
-sudo apt-get install ros-noetic-desktop-full
-
-# 初始化 rosdep
-sudo rosdep init
-rosdep update
-
-# 设置环境
-echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
-source ~/.bashrc
+cd linux_side
+./deploy.sh
 ```
 
-#### 2. 创建 catkin 工作空间
-
-```bash
-mkdir -p ~/catkin_ws/src
-cd ~/catkin_ws
-catkin_make
-source devel/setup.bash
-echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
-```
-
-#### 3. 安装 EGO-Planner-v2
-
-```bash
-cd Ros_arma3_Connection/linux_side
-chmod +x install_ego_planner.sh
-./install_ego_planner.sh
-```
-
-#### 4. 安装 ROS 节点
-
-```bash
-# 复制 ROS 节点到 catkin 工作空间
-cp -r ros_nodes ~/catkin_ws/src/arma3_ros_bridge
-cp -r image_processing ~/catkin_ws/src/arma3_ros_bridge/
-
-# 编译
-cd ~/catkin_ws
-catkin_make
-source devel/setup.bash
-```
-
-#### 5. （可选）安装 ARK 框架
-
-```bash
-cd Ros_arma3_Connection/linux_side
-chmod +x install_ark.sh
-./install_ark.sh
-```
+脚本会自动安装：
+- ROS Noetic
+- EGO-Planner-v2
+- 所有依赖
+- ROS 节点
 
 ### Windows 端详细安装
 
-#### 1. 安装 Python
+请参考：[MOD 安装指南](windows_side/arma3_mod/MOD_INSTALLATION_GUIDE.md)
 
-从 [python.org](https://www.python.org/) 下载并安装 Python 3.8 或更高版本。
-
-**重要**：安装时勾选 "Add Python to PATH"。
-
-#### 2. 安装 Python 包
-
-```batch
-pip install --upgrade pip
-pip install pillow numpy opencv-python
-```
-
-#### 3. 安装 Arma 3 MOD
-
-手动方式：
-
-1. 找到你的 Arma 3 任务目录：
-   ```
-   C:\Users\<你的用户名>\Documents\Arma 3 - Other Profiles\<你的游戏名>\missions\
-   ```
-
-2. 将 `windows_side/arma3_mod/Camera.Altis` 文件夹复制到该目录
-
-自动方式：
-
-运行 `windows_side/deploy.bat`，脚本会自动复制。
-
-#### 4. 配置网络
-
-编辑 `windows_side/bridge_program/arma3_bridge_enhanced.py`：
-
-```python
-# 修改为你的 Linux VM IP 地址
-SERVER_IP = '192.168.1.100'  # 改成你的 IP
-SERVER_PORT = 5555
-```
+该指南包含：
+- ArmaCOM 扩展安装
+- MOD 安装（快速模式和完整模式）
+- 网络配置
+- 故障排除
+- 开发指南
 
 ---
 
@@ -376,172 +362,90 @@ SERVER_PORT = 5555
    ./start.sh
    ```
 
-   你会看到类似的输出：
+   你会看到：
    ```
    [ INFO] [1234567890.123]: Arma3 ROS Bridge started
    [ INFO] [1234567890.124]: Waiting for connection on 0.0.0.0:5555...
    ```
 
-2. **启动 Arma 3 并加载任务**
+2. **启动 Arma 3 并加载 MOD**
 
-   - 打开 Arma 3
-   - Editor -> Altis -> Load -> Camera
-   - Preview (Ctrl+P)
-
-   你应该看到 6 个摄像头视角显示在屏幕顶部。
-
-3. **启动 Windows 桥接程序**
-
-   ```batch
-   cd windows_side
-   start.bat
+   ```cmd
+   arma3_x64.exe -mod=@ROS_Bridge -noBE
    ```
 
-   你会看到：
+   在编辑器中加载 Camera 任务并预览。
+
+3. **观察连接**
+
+   在 Arma 3 的日志文件中（`arma3.rpt`），你应该看到：
    ```
-   Starting Enhanced Arma 3 Bridge...
-   Connected to ROS server at 192.168.1.100:5555
+   [ROS Bridge] Post-Init started
+   [ROS Bridge] Initializing UAVs...
+   [ROS Bridge] Found 6 UAVs
+   [ROS Bridge] Initializing TCP client...
+   [ROS Bridge] Successfully connected to ROS server!
    ```
 
 4. **观察数据流**
 
-   在 Linux 端，你可以使用 ROS 工具查看数据：
+   在 Linux 端：
 
    ```bash
    # 查看话题列表
    rostopic list
 
-   # 查看图像话题
-   rostopic echo /arma3/camera_0/image_raw
-
-   # 查看点云话题
-   rostopic echo /arma3/point_cloud
+   # 查看状态数据
+   rostopic echo /arma3/uav_status
 
    # 使用 rviz 可视化
    rviz
    ```
 
+### 通信协议
+
+#### Arma 3 → ROS
+
+**状态数据**（每 0.1 秒）：
+```
+STATUS:UAV0:X,Y,Z,VX,VY,VZ,DIR|UAV1:X,Y,Z,VX,VY,VZ,DIR|...
+```
+
+**图像就绪通知**（每 0.5 秒）：
+```
+IMAGE_READY:timestamp
+```
+
+#### ROS → Arma 3
+
+**移动指令**：
+```
+MOVE:X,Y,Z
+```
+
+**目标设置**：
+```
+GOAL:X,Y,Z
+```
+
 ### 使用 EGO-Planner 进行路径规划
 
 1. **设置目标点**
-
-   在 ROS 中发布目标点：
 
    ```bash
    rostopic pub /goal geometry_msgs/PoseStamped "{header: {frame_id: 'world'}, pose: {position: {x: 100.0, y: 100.0, z: 50.0}}}"
    ```
 
-2. **观察路径规划结果**
+2. **观察路径规划**
 
    ```bash
-   # 查看规划的路径
    rostopic echo /ego_planner/trajectory
-
-   # 在 rviz 中可视化
    rviz -d ego_planner_config.rviz
    ```
 
 3. **控制无人机**
 
-   规划的路径会自动转换为控制指令，发送回 Arma 3。
-
-### 使用 ARK 框架（可选）
-
-如果你安装了 ARK 框架：
-
-1. **启动带 ARK 的系统**
-
-   ```bash
-   cd linux_side
-   ./start.sh
-   # 选择 'y' 启用 ARK
-   ```
-
-2. **训练自定义策略**
-
-   参见 `docs/ARK_INTEGRATION.md` 中的详细说明。
-
----
-
-## 配置说明
-
-### 网络配置
-
-#### Linux 端
-
-默认配置在 `linux_side/ros_nodes/arma3_ros_bridge.py`：
-
-```python
-HOST = '0.0.0.0'  # 监听所有接口
-PORT = 5555       # 端口号
-```
-
-#### Windows 端
-
-配置在 `windows_side/bridge_program/arma3_bridge_enhanced.py`：
-
-```python
-SERVER_IP = '192.168.1.100'  # Linux VM 的 IP
-SERVER_PORT = 5555
-```
-
-### 图像采集配置
-
-#### 截图区域
-
-在 `windows_side/bridge_program/arma3_bridge_enhanced.py` 中：
-
-```python
-self.regions = [
-    (0, 255, 455, 511),      # 区域 1
-    (455, 255, 911, 511),    # 区域 2
-    (911, 255, 1365, 511),   # 区域 3
-    (0, 511, 455, 767),      # 区域 4
-    (455, 511, 911, 767),    # 区域 5
-    (911, 511, 1365, 767)    # 区域 6
-]
-```
-
-**注意**：这些坐标是基于 1920x1080 分辨率的。如果你的屏幕分辨率不同，需要调整。
-
-#### 图像采集频率
-
-```python
-image_interval = 0.5  # 2 Hz (每秒 2 帧)
-status_interval = 0.1  # 10 Hz (每秒 10 次状态更新)
-```
-
-#### JPEG 压缩质量
-
-```python
-screenshot.save(img_buffer, format='JPEG', quality=85)
-```
-
-质量范围：1-100，越高质量越好但文件越大。
-
-### Arma 3 MOD 配置
-
-#### 无人机数量
-
-在 `windows_side/arma3_mod/Camera.Altis/init.sqf` 中：
-
-```sqf
-_uavs = [uav1, uav2, uav3, uav4, uav5, uav6];
-```
-
-#### 摄像头参数
-
-```sqf
-_cam camSetFov 0.75;  // 视野范围
-private _pitch = 15 * (pi / 180);  // 俯视角度
-```
-
-#### 无人机飞行参数
-
-```sqf
-_uav flyInHeight 10;     // 飞行高度（米）
-_uav limitSpeed 100;     // 最大速度（km/h）
-```
+   规划的路径会自动转换为 MOVE 指令，通过 TCP 发送回 Arma 3。
 
 ---
 
@@ -549,284 +453,93 @@ _uav limitSpeed 100;     // 最大速度（km/h）
 
 ```
 Ros_arma3_Connection/
-├── README.md                          # 本文件
-├── LICENSE                            # MIT 许可证
-│
-├── windows_side/                      # Windows 端代码
-│   ├── deploy.bat                     # 一键部署脚本
-│   ├── start.bat                      # 快速启动脚本
-│   │
-│   ├── arma3_mod/                     # Arma 3 MOD
-│   │   ├── README.md                  # MOD 使用指南
-│   │   ├── init.sqf                   # 简化版初始化脚本
-│   │   └── Camera.Altis/              # 完整的任务文件夹
-│   │       ├── init.sqf               # 任务初始化脚本
-│   │       └── mission.sqm            # 任务场景文件
-│   │
-│   └── bridge_program/                # Python 桥接程序
-│       ├── arma3_bridge.py            # 原始桥接程序
-│       ├── arma3_bridge_enhanced.py   # 增强版桥接程序（推荐）
-│       ├── screenshot.py              # 图像截取脚本
-│       └── requirements.txt           # Python 依赖
-│
-├── linux_side/                        # Linux 端代码
-│   ├── deploy.sh                      # 一键部署脚本
-│   ├── start.sh                       # 快速启动脚本
-│   ├── install_ego_planner.sh         # EGO-Planner 安装脚本
-│   ├── install_ark.sh                 # ARK 框架安装脚本
-│   │
-│   ├── ego_planner/                   # EGO-Planner-v2 代码
-│   │   ├── main_ws/                   # 主工作空间
-│   │   ├── formation_ws/              # 编队工作空间
-│   │   ├── tracking_ws/               # 跟踪工作空间
-│   │   └── interlaced_flight_ws/      # 交错飞行工作空间
-│   │
-│   ├── ros_nodes/                     # ROS 节点
-│   │   ├── arma3_ros_bridge.py        # ROS 桥接节点
-│   │   ├── stereo_vision.py           # 立体视觉节点（占位）
-│   │   ├── ego_planner_interface.py   # EGO-Planner 接口节点
-│   │   ├── ark_integration.py         # ARK 集成节点
-│   │   ├── arma3_bridge.launch        # ROS launch 文件
-│   │   ├── arma3_bridge_with_ark.launch  # 带 ARK 的 launch 文件
-│   │   ├── CMakeLists.txt             # CMake 配置
-│   │   └── package.xml                # ROS 包配置
-│   │
-│   └── image_processing/              # 图像处理模块
-│       └── stereo_vision.py           # 立体视觉处理
-│
-└── docs/                              # 文档
-    └── ARK_INTEGRATION.md             # ARK 集成文档
+├── windows_side/                    # Windows 端代码
+│   ├── arma3_mod/                   # Arma 3 MOD
+│   │   ├── @ROS_Bridge/             # MOD 文件夹
+│   │   │   ├── mod.cpp              # MOD 元数据
+│   │   │   ├── addons/
+│   │   │   │   └── ros_bridge/      # MOD 代码
+│   │   │   │       ├── config.cpp   # MOD 配置
+│   │   │   │       ├── XEH_preInit.sqf
+│   │   │   │       ├── XEH_postInit.sqf
+│   │   │   │       └── functions/   # 函数库
+│   │   │   └── keys/                # 签名密钥
+│   │   ├── Camera.Altis/            # 任务文件夹
+│   │   ├── ArmaCOM_x64.dll          # ArmaCOM 扩展
+│   │   ├── quick_install.bat        # 快速安装
+│   │   ├── install_mod.bat          # 完整安装
+│   │   ├── build_mod.bat            # PBO 打包
+│   │   └── MOD_INSTALLATION_GUIDE.md
+│   └── bridge_program/              # Python 桥接程序（可选）
+│       ├── arma3_bridge_enhanced.py
+│       └── requirements.txt
+├── linux_side/                      # Linux 端代码
+│   ├── ros_nodes/                   # ROS 节点
+│   │   ├── arma3_ros_bridge.py
+│   │   ├── ego_planner_interface.py
+│   │   ├── ark_integration.py
+│   │   ├── arma3_bridge.launch
+│   │   ├── CMakeLists.txt
+│   │   └── package.xml
+│   ├── image_processing/            # 图像处理
+│   │   └── stereo_vision.py
+│   ├── ego_planner/                 # EGO-Planner-v2
+│   ├── install_ego_planner.sh
+│   ├── install_ark.sh
+│   ├── deploy.sh
+│   └── start.sh
+├── docs/                            # 文档
+│   └── ARK_INTEGRATION.md
+└── README.md
 ```
 
 ---
 
 ## 故障排除
 
-### 问题 1：无法连接到 ROS 服务器
+### 问题 1：MOD 未加载
 
-**症状**：
-```
-Failed to connect: [Errno 111] Connection refused
-```
-
-**可能原因**：
-1. Linux 端的 ROS 节点没有启动
-2. IP 地址或端口配置错误
-3. 防火墙阻止连接
+**症状**：日志中没有 `[ROS Bridge]` 相关信息
 
 **解决方案**：
+1. 确保 MOD 正确安装到 Arma 3 目录
+2. 确保启动参数包含 `-mod=@ROS_Bridge -noBE`
+3. 检查 `arma3.rpt` 日志文件
 
-1. 确保 Linux 端的 ROS 节点已启动：
-   ```bash
-   rostopic list
-   # 应该看到 /arma3/... 话题
-   ```
+### 问题 2：无法连接到 ROS 服务器
 
-2. 检查 IP 地址：
-   ```bash
-   # 在 Linux 上
-   hostname -I
-   ```
-
-3. 检查防火墙：
-   ```bash
-   # 在 Linux 上
-   sudo ufw allow 5555/tcp
-   ```
-
-4. 测试连接：
-   ```bash
-   # 在 Windows 上
-   telnet <Linux_IP> 5555
-   ```
-
-### 问题 2：Arma 3 摄像头没有显示
-
-**症状**：
-屏幕顶部没有显示 6 个摄像头视角。
-
-**可能原因**：
-1. 无人机名称不匹配
-2. init.sqf 没有正确加载
+**症状**：`[ROS Bridge] ERROR: Failed to connect`
 
 **解决方案**：
+1. 确保 ROS 服务器已启动
+2. 检查 IP 地址和端口配置
+3. 检查防火墙设置
+4. 测试网络连接：`telnet <Linux_IP> 5555`
 
-1. 检查无人机名称：
-   - 在 Arma 3 编辑器中，选择无人机
-   - 确保名称为 `uav1`, `uav2`, ..., `uav6`
+### 问题 3：ArmaCOM 扩展未加载
 
-2. 检查 init.sqf：
-   - 确保 `init.sqf` 在任务文件夹的根目录
-   - 重新加载任务
-
-3. 查看 Arma 3 的错误日志：
-   ```
-   C:\Users\<你的用户名>\AppData\Local\Arma 3\arma3.rpt
-   ```
-
-### 问题 3：图像传输延迟很大
-
-**症状**：
-ROS 端接收到的图像有明显延迟（> 1 秒）。
-
-**可能原因**：
-1. 网络带宽不足
-2. JPEG 压缩质量太高
-3. 图像采集频率太高
+**症状**：`[ROS Bridge] ERROR: Failed to create TCP client`
 
 **解决方案**：
+1. 确认 `ArmaCOM_x64.dll` 在 Arma 3 目录
+2. 确保使用 `-noBE` 参数（禁用 BattlEye）
+3. 查看 Arma 3 日志中的扩展加载信息
 
-1. 降低 JPEG 压缩质量：
-   ```python
-   screenshot.save(img_buffer, format='JPEG', quality=70)  # 从 85 降到 70
-   ```
-
-2. 降低图像采集频率：
-   ```python
-   image_interval = 1.0  # 从 0.5 增加到 1.0（1 Hz）
-   ```
-
-3. 使用有线网络而不是 WiFi
-
-4. 降低图像分辨率（修改截图区域大小）
-
-### 问题 4：EGO-Planner 编译失败
-
-**症状**：
-```
-CMake Error: ...
-```
-
-**可能原因**：
-1. 缺少依赖
-2. ROS 环境没有正确设置
-
-**解决方案**：
-
-1. 安装所有依赖：
-   ```bash
-   sudo apt-get install -y \
-       ros-noetic-cv-bridge \
-       ros-noetic-pcl-* \
-       libarmadillo-dev \
-       libgoogle-glog-dev
-   ```
-
-2. 确保 ROS 环境已设置：
-   ```bash
-   source /opt/ros/noetic/setup.bash
-   source ~/catkin_ws/devel/setup.bash
-   ```
-
-3. 清理并重新编译：
-   ```bash
-   cd ~/catkin_ws
-   catkin_make clean
-   catkin_make
-   ```
-
-### 问题 5：ARK 框架安装失败
-
-**症状**：
-```
-ModuleNotFoundError: No module named 'ark'
-```
-
-**可能原因**：
-1. Conda 环境没有激活
-2. ARK 没有正确安装
-
-**解决方案**：
-
-1. 激活 Conda 环境：
-   ```bash
-   conda activate ark_env
-   ```
-
-2. 重新安装 ARK：
-   ```bash
-   cd ~/ark_framework
-   pip install -e .
-   ```
-
-3. 验证安装：
-   ```bash
-   python -c "import ark; print(ark.__version__)"
-   ```
-
----
-
-## 开发指南
-
-### 添加新的 ROS 节点
-
-1. 在 `linux_side/ros_nodes/` 中创建新的 Python 文件
-
-2. 在 `CMakeLists.txt` 中添加：
-   ```cmake
-   catkin_install_python(PROGRAMS
-     scripts/your_new_node.py
-     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-   )
-   ```
-
-3. 在 launch 文件中添加：
-   ```xml
-   <node name="your_new_node" pkg="arma3_ros_bridge" type="your_new_node.py" output="screen"/>
-   ```
-
-### 修改通信协议
-
-通信协议定义在：
-- Windows 端：`arma3_bridge_enhanced.py`
-- Linux 端：`arma3_ros_bridge.py`
-
-添加新的消息类型：
-
-1. 定义消息头（4 字节）
-2. 定义消息格式（使用 `struct.pack/unpack`）
-3. 在两端同时实现
-
-示例：
-
-```python
-# 发送端
-packet = bytearray()
-packet.extend(b'NEWM')  # 新消息类型
-packet.extend(struct.pack('I', data))
-socket.sendall(packet)
-
-# 接收端
-header = socket.recv(4)
-if header == b'NEWM':
-    data = struct.unpack('I', socket.recv(4))[0]
-```
-
-### 贡献代码
-
-欢迎贡献！请遵循以下步骤：
-
-1. Fork 本仓库
-2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交你的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
+更多故障排除信息，请参考：[MOD 安装指南 - 故障排除](windows_side/arma3_mod/MOD_INSTALLATION_GUIDE.md#故障排除)
 
 ---
 
 ## 致谢
 
-本项目基于以下开源项目：
+本项目使用或参考了以下开源项目：
 
-- **EGO-Planner-v2**: [ZJU-FAST-Lab/EGO-Planner-v2](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)
-- **ARK Robotics**: [Robotics-Ark/ark_framework](https://github.com/Robotics-Ark/ark_framework)
-- **ArmaCOM**: [googleben/ArmaCOM](https://github.com/googleben/ArmaCOM)
-- **codingWithArma3**: [Daboolu/codingWithArma3](https://github.com/Daboolu/codingWithArma3)
+- **[EGO-Planner-v2](https://github.com/ZJU-FAST-Lab/EGO-Planner-v2)** - ZJU-FAST-Lab 的多无人机路径规划算法
+- **[ArmaCOM](https://github.com/googleben/ArmaCOM)** - googleben 的 Arma 3 通信扩展
+- **[codingWithArma3](https://github.com/Daboolu/codingWithArma3)** - Daboolu 的 Arma 3 图像截取项目
+- **[ARK Robotics](https://github.com/Robotics-Ark/ark_framework)** - ARK 机器人框架
+- **ROS Noetic** - Robot Operating System
 
-特别感谢：
-- ZJU-FAST-Lab 团队的 EGO-Planner 算法
-- ARK Robotics 团队的机器学习框架
-- Arma 3 社区的 SQF 脚本资源
+特别感谢所有开源贡献者！
 
 ---
 
@@ -840,9 +553,9 @@ if header == b'NEWM':
 
 如有问题或建议，请通过以下方式联系：
 
-- GitHub Issues: [https://github.com/HitTheStars/Ros_arma3_Connection/issues](https://github.com/HitTheStars/Ros_arma3_Connection/issues)
-- Email: your-email@example.com
+- **GitHub Issues**: [https://github.com/HitTheStars/Ros_arma3_Connection/issues](https://github.com/HitTheStars/Ros_arma3_Connection/issues)
+- **项目主页**: [https://github.com/HitTheStars/Ros_arma3_Connection](https://github.com/HitTheStars/Ros_arma3_Connection)
 
 ---
 
-**祝你使用愉快！Happy Flying! 🚁**
+**祝您使用愉快！Happy Flying! 🚁**
