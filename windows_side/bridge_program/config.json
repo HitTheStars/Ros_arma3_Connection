@@ -1,0 +1,28 @@
+{
+  "ros_server": {
+    "ip": "192.168.1.100",
+    "port": 5555,
+    "comment": "修改为你的 Linux VM 的 IP 地址"
+  },
+  "image_capture": {
+    "regions": [
+      [0, 255, 455, 511],
+      [455, 255, 911, 511],
+      [911, 255, 1365, 511],
+      [0, 511, 455, 767],
+      [455, 511, 911, 767],
+      [911, 511, 1365, 767]
+    ],
+    "interval": 0.5,
+    "comment": "图像采集区域和间隔（秒）"
+  },
+  "stereo_vision": {
+    "left_camera_index": 1,
+    "right_camera_index": 2,
+    "comment": "用于立体视觉的左右摄像头索引（0-5）"
+  },
+  "pointcloud": {
+    "max_points": 10000,
+    "comment": "发送到 ROS 的最大点云数量"
+  }
+}
