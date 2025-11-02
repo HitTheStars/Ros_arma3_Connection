@@ -1,0 +1,12 @@
+# Arma 3 Depth Bridge 依赖
+
+# 深度学习推理
+onnxruntime-directml>=1.17.0  # ONNX Runtime with DirectML (GPU acceleration on Windows)
+
+# 图像处理
+opencv-python>=4.8.0
+Pillow>=10.0.0
+numpy>=1.24.0
+
+# 网络通信
+# (使用 Python 标准库 socket，无需额外安装)

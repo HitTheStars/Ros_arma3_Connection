@@ -1,0 +1,18 @@
+{
+  "depth_model": {
+    "model_path": "models/depth_anything_v2_vitb.onnx",
+    "input_size": [518, 518],
+    "comment": "Depth Anything V2 Base 模型，下载地址见 README"
+  },
+  "capture": {
+    "region": [0, 0, 1920, 1080],
+    "target_size": [640, 480],
+    "fps": 10,
+    "comment": "根据您的屏幕分辨率调整 region"
+  },
+  "tcp": {
+    "host": "192.168.1.100",
+    "port": 5555,
+    "comment": "Linux 虚拟机的 IP 地址"
+  }
+}
