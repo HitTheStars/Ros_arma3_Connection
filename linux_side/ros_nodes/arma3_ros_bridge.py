@@ -181,21 +181,18 @@ class Arma3ROSBridge:
                 command = self.command_queue.get(timeout=1.0)
                 
                 if command['type'] == 'MOVE':
-                    # Pack MOVE command
-                    msg_type = b'MOVE'
-                    message = struct.pack('!4sI3f3f',
-                                        msg_type,
-                                        command['uav_id'],
-                                        *command['target_position'],
-                                        *command['target_velocity'])
+                    # Construct text protocol message
+                    x, y, z = command['target_position']
+                    uav_id = command['uav_id']
+                    message = f"MOVE:{uav_id},{x},{y},{z}\n"
                     
-                    self.client_socket.sendall(message)
-                    rospy.loginfo(f"Sent MOVE command for UAV {command['uav_id']}")
+                    self.client_socket.sendall(message.encode('utf-8'))
+                    rospy.loginfo(f"Sent MOVE command for UAV {uav_id}: [{x}, {y}, {z}]")
                     
                 elif command['type'] == 'STOP':
-                    # Pack STOP command
-                    msg_type = b'STOP'
-                    self.client_socket.sendall(msg_type)
+                    # Send STOP command
+                    message = "STOP\n"
+                    self.client_socket.sendall(message.encode('utf-8'))
                     rospy.loginfo("Sent STOP command")
                     
             except queue.Empty:

@@ -57,16 +57,20 @@ ROS_fnc_handleCallback = {
                     private _cmd = _parts select 0;
                     private _args = (_parts select 1) splitString ",";
                     
-                    if (_cmd == "MOVE" && count _args >= 3) then {
-                        private _x = parseNumber (_args select 0);
-                        private _y = parseNumber (_args select 1);
-                        private _z = parseNumber (_args select 2);
+                    if (_cmd == "MOVE" && count _args >= 4) then {
+                        private _uavId = parseNumber (_args select 0);
+                        private _targetX = parseNumber (_args select 1);
+                        private _targetY = parseNumber (_args select 2);
+                        private _targetZ = parseNumber (_args select 3);
                         
-                        // Move all UAVs to the target position
-                        {
-                            _x doMove [_x, _y, _z];
-                            diag_log format ["[ROS Bridge] Moving UAV %1 to [%2, %3, %4]", _x, _x, _y, _z];
-                        } forEach ROS_UAVs;
+                        // Move specific UAV to the target position
+                        if (_uavId < count ROS_UAVs) then {
+                            private _uav = ROS_UAVs select _uavId;
+                            _uav doMove [_targetX, _targetY, _targetZ];
+                            diag_log format ["[ROS Bridge] Moving UAV %1 to [%2, %3, %4]", _uavId, _targetX, _targetY, _targetZ];
+                        } else {
+                            diag_log format ["[ROS Bridge] ERROR: Invalid UAV ID %1", _uavId];
+                        };
                     };
                     
                     if (_cmd == "GOAL" && count _args >= 3) then {
