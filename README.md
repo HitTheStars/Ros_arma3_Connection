@@ -158,6 +158,40 @@
 
 ---
 
+### 🚀 两种启动方式
+
+#### 方式 A: Arma 3 屏幕截图模式（推荐，用于演示）
+
+**优点**：
+- ✅ 实现简单（无需 C++ 扩展）
+- ✅ 使用 MSS 库（比 PIL 快 4 倍）
+- ✅ 自动窗口检测（无需硬编码坐标）
+- ✅ 5-10 FPS，延迟 ~100 ms
+
+**详细指南**：[QUICK_START_ARMA3_SCREENSHOT.md](windows_side/QUICK_START_ARMA3_SCREENSHOT.md)
+
+**简要步骤**：
+
+1. **Linux 端**：启动深度接收器
+   ```bash
+   cd ~/Ros_arma3_Connection/linux_side
+   ./start_system.sh
+   ```
+
+2. **Windows 端**：启动 Arma 3 并加载 SQF 脚本
+   - 启动 Arma 3（禁用 BattlEye）
+   - 在 Eden Editor 中加载 `initUAVCameras.sqf` 脚本
+   - 屏幕上应显示 6 个无人机视角（3列×2行）
+
+3. **Windows 端**：启动深度发送器
+   ```cmd
+   python arma3_depth_sender.py --model models\depth_anything_v2_vits.onnx --linux-ip 192.168.1.100 --input arma3_screenshot --region 0
+   ```
+
+---
+
+#### 方式 B: 摄像头/视频模式（用于测试）
+
 ### 🚀 三步启动系统
 
 #### 步骤 1: Linux 端部署（15 分钟）
