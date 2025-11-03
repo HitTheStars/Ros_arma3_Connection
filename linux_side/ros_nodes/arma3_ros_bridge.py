@@ -13,6 +13,12 @@ import queue
 from sensor_msgs.msg import Image, PointCloud2, PointField
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from std_msgs.msg import Header
+try:
+    from quadrotor_msgs.msg import PositionCommand
+    HAS_POSITION_COMMAND = True
+except ImportError:
+    rospy.logwarn("quadrotor_msgs not found, using PoseStamped instead")
+    HAS_POSITION_COMMAND = False
 from cv_bridge import CvBridge
 import cv2
 import numpy as np
@@ -24,8 +30,9 @@ class Arma3ROSBridge:
         rospy.init_node('arma3_ros_bridge', anonymous=False)
         
         # Parameters
-        self.listen_port = rospy.get_param('~listen_port', 5555)
+        self.listen_port = rospy.get_param('~listen_port', 5556)  # Changed from 5555 to avoid conflict
         self.num_uavs = rospy.get_param('~num_uavs', 3)
+        self.command_send_rate = rospy.get_param('~command_send_rate', 10)  # Hz, default 10 Hz
         
         # Socket for communication
         self.server_socket = None
@@ -52,12 +59,24 @@ class Arma3ROSBridge:
             self.vel_pubs.append(vel_pub)
         
         # Subscribers for control commands
-        for i in range(self.num_uavs):
-            rospy.Subscriber(f'/ego_planner/uav_{i}/command', PoseStamped, 
-                           lambda msg, uav_id=i: self.command_callback(msg, uav_id))
+        # Try to subscribe to PositionCommand first (has velocity info)
+        # Fall back to PoseStamped if PositionCommand is not available
+        if HAS_POSITION_COMMAND:
+            rospy.Subscriber('/position_cmd', PositionCommand, self.position_cmd_callback)
+            rospy.loginfo("Subscribed to /position_cmd (PositionCommand)")
+        else:
+            for i in range(self.num_uavs):
+                rospy.Subscriber(f'/ego_planner/uav_{i}/command', PoseStamped, 
+                               lambda msg, uav_id=i: self.command_callback(msg, uav_id))
+            rospy.loginfo("Subscribed to /ego_planner/uav_*/command (PoseStamped)")
         
         # Queues
         self.command_queue = queue.Queue()
+        
+        # Rate limiting for command sending
+        self.last_command_time = {}  # Dictionary to store last send time for each UAV
+        for i in range(self.num_uavs):
+            self.last_command_time[i] = rospy.Time(0)
         
         rospy.loginfo("Arma3 ROS Bridge initialized")
     
@@ -183,11 +202,15 @@ class Arma3ROSBridge:
                 if command['type'] == 'MOVE':
                     # Construct text protocol message
                     x, y, z = command['target_position']
+                    vx, vy, vz = command.get('target_velocity', (0.0, 0.0, 0.0))
+                    yaw = command.get('target_yaw', 0.0)
                     uav_id = command['uav_id']
-                    message = f"MOVE:{uav_id},{x},{y},{z}\n"
+                    
+                    # Format: MOVE:UAV_ID,X,Y,Z,VX,VY,VZ,YAW
+                    message = f"MOVE:{uav_id},{x:.3f},{y:.3f},{z:.3f},{vx:.3f},{vy:.3f},{vz:.3f},{yaw:.3f}\n"
                     
                     self.client_socket.sendall(message.encode('utf-8'))
-                    rospy.loginfo(f"Sent MOVE command for UAV {uav_id}: [{x}, {y}, {z}]")
+                    rospy.loginfo(f"Sent MOVE command for UAV {uav_id}: pos=[{x:.2f}, {y:.2f}, {z:.2f}], vel=[{vx:.2f}, {vy:.2f}, {vz:.2f}], yaw={yaw:.2f}")
                     
                 elif command['type'] == 'STOP':
                     # Send STOP command
@@ -202,13 +225,56 @@ class Arma3ROSBridge:
                 self.connected = False
                 break
     
+    def position_cmd_callback(self, msg):
+        """Callback for receiving PositionCommand from EGO-Planner (with velocity info)"""
+        # Assume UAV ID is 0 for now (single UAV)
+        # TODO: Support multiple UAVs by parsing trajectory_id or using separate topics
+        uav_id = 0
+        
+        # Rate limiting
+        current_time = rospy.Time.now()
+        time_since_last = (current_time - self.last_command_time[uav_id]).to_sec()
+        min_interval = 1.0 / self.command_send_rate
+        
+        if time_since_last < min_interval:
+            return
+        
+        self.last_command_time[uav_id] = current_time
+        
+        # Extract position, velocity, and yaw from PositionCommand
+        command = {
+            'type': 'MOVE',
+            'uav_id': uav_id,
+            'target_position': (msg.position.x, msg.position.y, msg.position.z),
+            'target_velocity': (msg.velocity.x, msg.velocity.y, msg.velocity.z),
+            'target_yaw': msg.yaw
+        }
+        
+        try:
+            self.command_queue.put(command, block=False)
+        except queue.Full:
+            rospy.logwarn("Command queue full, dropping command")
+    
     def command_callback(self, msg, uav_id):
-        """Callback for receiving control commands from EGO-Planner"""
+        """Callback for receiving control commands from EGO-Planner (PoseStamped fallback)"""
+        # Rate limiting: only send command if enough time has passed
+        current_time = rospy.Time.now()
+        time_since_last = (current_time - self.last_command_time[uav_id]).to_sec()
+        min_interval = 1.0 / self.command_send_rate  # e.g., 0.1 seconds for 10 Hz
+        
+        if time_since_last < min_interval:
+            # Skip this command to maintain rate limit
+            return
+        
+        # Update last command time
+        self.last_command_time[uav_id] = current_time
+        
         command = {
             'type': 'MOVE',
             'uav_id': uav_id,
             'target_position': (msg.pose.position.x, msg.pose.position.y, msg.pose.position.z),
-            'target_velocity': (0.0, 0.0, 0.0)  # Default velocity
+            'target_velocity': (0.0, 0.0, 0.0),  # No velocity info in PoseStamped
+            'target_yaw': 0.0  # No yaw info in PoseStamped
         }
         
         try:

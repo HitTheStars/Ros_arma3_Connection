@@ -63,11 +63,37 @@ ROS_fnc_handleCallback = {
                         private _targetY = parseNumber (_args select 2);
                         private _targetZ = parseNumber (_args select 3);
                         
-                        // Move specific UAV to the target position
+                        // Parse velocity and yaw if provided (format: MOVE:UAV_ID,X,Y,Z,VX,VY,VZ,YAW)
+                        private _hasVelocity = (count _args >= 8);
+                        private _targetVX = if (_hasVelocity) then {parseNumber (_args select 4)} else {0};
+                        private _targetVY = if (_hasVelocity) then {parseNumber (_args select 5)} else {0};
+                        private _targetVZ = if (_hasVelocity) then {parseNumber (_args select 6)} else {0};
+                        private _targetYaw = if (_hasVelocity) then {parseNumber (_args select 7)} else {0};
+                        
+                        // Move specific UAV with velocity control
                         if (_uavId < count ROS_UAVs) then {
                             private _uav = ROS_UAVs select _uavId;
-                            _uav doMove [_targetX, _targetY, _targetZ];
-                            diag_log format ["[ROS Bridge] Moving UAV %1 to [%2, %3, %4]", _uavId, _targetX, _targetY, _targetZ];
+                            
+                            if (_hasVelocity) then {
+                                // Use setVelocity for precise velocity control
+                                _uav setVelocity [_targetVX, _targetVY, _targetVZ];
+                                
+                                // Use setVectorDirAndUp for precise orientation control
+                                // Calculate direction vector from yaw angle
+                                private _dirX = sin _targetYaw;
+                                private _dirY = cos _targetYaw;
+                                private _dirZ = 0;
+                                private _upVector = [0, 0, 1];  // Standard up vector
+                                _uav setVectorDirAndUp [[_dirX, _dirY, _dirZ], _upVector];
+                                
+                                diag_log format ["[ROS Bridge] UAV %1: pos=[%2,%3,%4], vel=[%5,%6,%7], yaw=%8", 
+                                    _uavId, _targetX, _targetY, _targetZ, _targetVX, _targetVY, _targetVZ, _targetYaw];
+                            } else {
+                                // Fallback to doMove for position-only control
+                                _uav doMove [_targetX, _targetY, _targetZ];
+                                diag_log format ["[ROS Bridge] Moving UAV %1 to [%2, %3, %4] (position only)", 
+                                    _uavId, _targetX, _targetY, _targetZ];
+                            };
                         } else {
                             diag_log format ["[ROS Bridge] ERROR: Invalid UAV ID %1", _uavId];
                         };
