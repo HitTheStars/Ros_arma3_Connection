@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Multi-UAV Depth Receiver Launch File -->
+    
+    <!-- Parameters -->
+    <arg name="num_uavs" default="6" doc="Number of UAVs"/>
+    <arg name="base_port" default="5560" doc="Base port for depth receivers (each UAV uses base_port + uav_id)"/>
+    
+    <!-- Multi-UAV Depth Receiver Node -->
+    <node pkg="arma3_ros_bridge" type="arma3_depth_receiver_multi.py" name="arma3_depth_receiver_multi" output="screen">
+        <param name="num_uavs" value="$(arg num_uavs)"/>
+        <param name="base_port" value="$(arg base_port)"/>
+    </node>
+    
+    <!-- Info -->
+    <node pkg="rostopic" type="rostopic" name="depth_topics_info" args="list | grep /uav" output="screen" launch-prefix="bash -c 'sleep 2; '" />
+    
+</launch>
